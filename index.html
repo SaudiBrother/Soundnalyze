@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Soundnalyze — Analyze audio quality and detect fake upscaled bitrates with advanced spectral analysis.">
+    <meta name="keywords" content="audio analyzer, spectral analysis, bitrate detector, audio quality, web audio api, FFT">
+    <meta property="og:title"       content="Soundnalyze | Professional Audio Quality Analyzer">
+    <meta property="og:description" content="Deteksi upscaled audio dan analisis spektral tanpa upload ke server.">
+    <meta property="og:type"        content="website">
+    <meta name="theme-color"        content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Soundnalyze">
+
+    <title>Soundnalyze | Professional Audio Quality & Spectral Analyzer</title>
+
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+
+    <!-- iOS / Safari PWA -->
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/icon-152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Soundnalyze">
+
+    <!-- Tile (Windows / Android) -->
+    <meta name="msapplication-TileImage" content="assets/icon-144.png">
+    <meta name="msapplication-TileColor" content="#6366f1">
+    <meta name="msapplication-config" content="none">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+
+    <div class="app-container">
+
+        <!-- ═══════════════════════════════════ HEADER ═══════════════════════════════════ -->
+        <header role="banner">
+            <nav class="navbar" role="navigation" aria-label="Main navigation">
+                <div class="logo">
+                    <div class="logo-icon" aria-hidden="true">
+                        <i class="fa-solid fa-wave-square"></i>
+                    </div>
+                    <h1>Sound<span class="accent-text">nalyze</span></h1>
+                </div>
+
+                <div class="header-controls">
+                    <!-- Install App button (hidden until browser fires beforeinstallprompt) -->
+                    <button id="install-btn" class="install-btn" hidden
+                            aria-label="Install Soundnalyze as app" title="Install as app">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Install</span>
+                    </button>
+
+                    <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" title="Toggle light/dark mode">
+                        <i class="fa-solid fa-sun" id="theme-icon"></i>
+                    </button>
+                    <button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">
+                        <i class="fa-solid fa-keyboard"></i>
+                    </button>
+                    <button id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                    <a href="https://github.com/SaudiBrother/Audio-checker" target="_blank" rel="noopener noreferrer"
+                       class="github-link" aria-label="View source on GitHub">
+                        <i class="fa-brands fa-github"></i>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </nav>
+        </header>
+
+        <!-- ═══════════════════════════════ SETTINGS MODAL ═══════════════════════════════ -->
+        <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-hidden="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="settings-title"><i class="fa-solid fa-sliders"></i> Settings</h2>
+                    <button class="close-modal" aria-label="Close settings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="concurrent-processing">
+                            <i class="fa-solid fa-microchip"></i> Concurrent Processing
+                        </label>
+                        <select id="concurrent-processing">
+                            <option value="1">1 file at a time</option>
+                            <option value="2" selected>2 files at a time</option>
+                            <option value="3">3 files at a time</option>
+                            <option value="4">4 files at a time</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="fft-size">
+                            <i class="fa-solid fa-chart-line"></i> FFT Resolution
+                        </label>
+                        <select id="fft-size">
+                            <option value="2048">2048 — Faster</option>
+                            <option value="4096" selected>4096 — Balanced</option>
+                            <option value="8192">8192 — High Detail</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="color-scheme">
+                            <i class="fa-solid fa-palette"></i> Spectrogram Colors
+                        </label>
+                        <select id="color-scheme">
+                            <option value="heat" selected>Heat Map</option>
+                            <option value="rainbow">Rainbow</option>
+                            <option value="ocean">Ocean</option>
+                            <option value="greyscale">Greyscale</option>
+                        </select>
+                    </div>
+                    <p class="setting-hint"><i class="fa-solid fa-circle-info"></i> Changes apply to new analyses only.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════ SHORTCUTS MODAL ═══════════════════════════════ -->
+        <div id="shortcuts-modal" class="modal" role="dialog" aria-labelledby="shortcuts-title" aria-hidden="true">
+            <div class="modal-content shortcuts-content">
+                <div class="modal-header">
+                    <h2 id="shortcuts-title"><i class="fa-solid fa-keyboard"></i> Keyboard Shortcuts</h2>
+                    <button class="close-modal" aria-label="Close shortcuts">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shortcuts-grid">
+                        <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>O</kbd><span>Open audio files</span></div>
+                        <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>E</kbd><span>Export results (CSV)</span></div>
+                        <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>D</kbd><span>Clear all results</span></div>
+                        <div class="shortcut-row"><kbd>Esc</kbd><span>Close modal</span></div>
+                        <div class="shortcut-row"><kbd>?</kbd><span>Show this help</span></div>
+                        <div class="shortcut-row"><kbd>Drag &amp; Drop</kbd><span>Upload files directly</span></div>
+                    </div>
+                    <h3 class="shortcut-section-title">Card Controls</h3>
+                    <div class="shortcuts-grid">
+                        <div class="shortcut-row"><i class="fa-solid fa-expand"></i><span>Expand full spectrogram</span></div>
+                        <div class="shortcut-row"><i class="fa-solid fa-scale-balanced"></i><span>Add to comparison</span></div>
+                        <div class="shortcut-row"><i class="fa-solid fa-play"></i><span>Play / Pause audio</span></div>
+                        <div class="shortcut-row"><i class="fa-solid fa-chart-area"></i><span>Toggle spectrum / waveform</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════ MAIN ══════════════════════════════════════ -->
+        <main id="main-content" role="main">
+
+            <!-- Hero -->
+            <section class="hero" aria-label="Application description">
+                <div class="hero-viz" aria-hidden="true">
+                    <div class="hero-bars" id="hero-bars"></div>
+                </div>
+                <div class="hero-content">
+                    <h2>Advanced Audio <span class="accent-text">Spectral Analysis</span></h2>
+                    <p class="subtitle">
+                        Detect upscaled audio, fake bitrates, and spectral anomalies using a real
+                        FFT engine — entirely in your browser, no upload to server.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Upload zone -->
+            <section class="upload-container" aria-labelledby="upload-heading">
+                <div class="upload-section" id="drop-zone" tabindex="0" role="region"
+                     aria-label="Audio file upload area. Press Enter or Space to open file picker.">
+                    <input type="file" id="audio-input"
+                           accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.webm"
+                           multiple hidden>
+
+                    <!-- Normal state -->
+                    <div class="upload-content" id="upload-idle">
+                        <div class="upload-icon-wrapper" aria-hidden="true">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <h3 id="upload-heading">Drop Audio Files Here</h3>
+                        <p>Supports MP3 · FLAC · WAV · M4A · AAC · OGG · OPUS</p>
+                        <div class="upload-buttons">
+                            <button class="btn-primary" onclick="document.getElementById('audio-input').click()">
+                                <i class="fa-solid fa-folder-open"></i> Browse Files
+                            </button>
+                            <button id="record-btn" class="btn-secondary">
+                                <i class="fa-solid fa-microphone"></i> Record Audio
+                            </button>
+                        </div>
+                        <p class="upload-hint"><i class="fa-solid fa-lightbulb"></i> Tip: Drop multiple files for batch analysis</p>
+                    </div>
+
+                    <!-- Recording overlay -->
+                    <div class="recording-overlay" id="recording-overlay" hidden>
+                        <div class="recording-header">
+                            <span class="recording-dot" aria-hidden="true"></span>
+                            <span class="recording-label">Recording</span>
+                            <span class="recording-timer" id="recording-timer">0:00</span>
+                        </div>
+                        <canvas id="recording-waveform" height="56" aria-label="Live waveform"></canvas>
+                        <p class="recording-hint">Recording from your microphone at 44.1 kHz</p>
+                    </div>
+                </div>
+
+                <!-- Batch controls -->
+                <div class="batch-controls" id="batch-controls" style="display:none;">
+                    <div class="batch-info">
+                        <span id="batch-count">0 files in queue</span>
+                        <button id="select-all" class="btn-text" title="Select all results for comparison">
+                            <i class="fa-solid fa-check-double"></i> Select All
+                        </button>
+                    </div>
+                    <div class="batch-actions">
+                        <button id="pause-resume" class="btn-secondary">
+                            <i class="fa-solid fa-pause"></i> Pause
+                        </button>
+                        <button id="cancel-all" class="btn-text">
+                            <i class="fa-solid fa-ban"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Global progress loader -->
+                <div id="global-loader" class="global-loader hidden" role="status" aria-live="polite" aria-label="Processing progress">
+                    <div class="loader-header">
+                        <div class="spinner" aria-hidden="true"></div>
+                        <div class="loader-info">
+                            <span id="loader-text">Analyzing audio files…</span>
+                            <div class="loader-stats">
+                                <span id="loader-count">0/0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="global-progress-fill" class="progress-fill"
+                             role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                    </div>
+                    <div class="loader-details">
+                        <span id="current-file">—</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results header -->
+            <section class="results-header" id="results-header" style="display:none;" aria-labelledby="results-title">
+                <div class="section-title">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                    <h3 id="results-title">Results <span id="results-count" class="results-count">(0)</span></h3>
+                </div>
+                <div class="results-actions">
+                    <div class="export-group">
+                        <button id="export-btn" class="btn-secondary" title="Export results">
+                            <i class="fa-solid fa-download"></i> Export CSV
+                        </button>
+                        <button id="export-json-btn" class="btn-secondary" title="Export as JSON">
+                            <i class="fa-solid fa-code"></i> JSON
+                        </button>
+                    </div>
+                    <button id="sort-btn" class="btn-text" title="Cycle sort order">
+                        <i class="fa-solid fa-arrow-down-wide-short"></i>
+                        <span class="sort-label">Quality ↓</span>
+                    </button>
+                    <button id="clear-all-btn" class="btn-text danger-btn" title="Clear all results">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Results grid -->
+            <div id="results-grid" class="results-grid" role="list" aria-label="Analysis results"></div>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="empty-state" role="status" aria-live="polite">
+                <div class="empty-icon" aria-hidden="true">
+                    <div class="empty-bars">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <h3>No files analyzed yet</h3>
+                <p>Drop audio files above or click Browse Files to start</p>
+            </div>
+
+            <!-- Comparison mode -->
+            <section class="comparison-mode" id="comparison-mode" style="display:none;"
+                     aria-labelledby="comparison-title">
+                <div class="comparison-header">
+                    <div class="comparison-title-group">
+                        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                        <h3 id="comparison-title">Comparison</h3>
+                        <span class="badge">0 files selected</span>
+                    </div>
+                    <button id="exit-comparison" class="btn-text">
+                        <i class="fa-solid fa-xmark"></i> Exit
+                    </button>
+                </div>
+                <div class="comparison-charts">
+                    <canvas id="comparison-chart" height="220" aria-label="Comparison chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Quality reference -->
+            <section class="quality-reference" aria-labelledby="ref-heading">
+                <div class="reference-header">
+                    <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                    <h3 id="ref-heading">Quality Reference Scale</h3>
+                </div>
+                <div class="reference-grid">
+                    <div class="ref-item" style="--item-color: var(--color-bad);">
+                        <span class="ref-badge"><i class="fa-solid fa-xmark"></i> Fake / Upscaled</span>
+                        <p>Cutoff below 14 kHz with artificial extension</p>
+                        <small>Common in re-encoded files</small>
+                    </div>
+                    <div class="ref-item" style="--item-color: var(--color-moderate);">
+                        <span class="ref-badge"><i class="fa-solid fa-check"></i> Moderate</span>
+                        <p>Mid-range spectrum, ~16 kHz cutoff</p>
+                        <small>Standard streaming (128–192 kbps)</small>
+                    </div>
+                    <div class="ref-item" style="--item-color: var(--color-good);">
+                        <span class="ref-badge"><i class="fa-solid fa-star"></i> High Quality</span>
+                        <p>Full MP3 spectrum, ~18–19 kHz</p>
+                        <small>320 kbps MP3 / premium streaming</small>
+                    </div>
+                    <div class="ref-item" style="--item-color: var(--color-excellent);">
+                        <span class="ref-badge"><i class="fa-solid fa-gem"></i> Lossless</span>
+                        <p>Complete spectrum above 20 kHz</p>
+                        <small>FLAC · WAV · AIFF · Studio masters</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Batch statistics -->
+            <section class="statistics-panel" id="statistics-panel" style="display:none;"
+                     aria-labelledby="stats-heading">
+                <div class="stats-panel-header">
+                    <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                    <h3 id="stats-heading">Batch Statistics</h3>
+                </div>
+                <div class="stat-cards-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:var(--color-excellent);">
+                            <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i>
+                        </div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">Highest Quality</span>
+                            <span class="stat-card-value" id="stat-best">—</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:var(--color-bad);">
+                            <i class="fa-solid fa-arrow-trend-down" aria-hidden="true"></i>
+                        </div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">Lowest Quality</span>
+                            <span class="stat-card-value" id="stat-worst">—</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:var(--color-good);">
+                            <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
+                        </div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">Average Quality</span>
+                            <span class="stat-card-value" id="stat-average">—</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:var(--primary-color);">
+                            <i class="fa-solid fa-file-waveform" aria-hidden="true"></i>
+                        </div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">Files Analyzed</span>
+                            <span class="stat-card-value" id="stat-total">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer" role="contentinfo">
+            <div class="footer-content">
+                <p>&copy; 2025 Soundnalyze &mdash; Advanced Spectral Analysis Engine</p>
+                <p class="footer-meta">
+                    <span><i class="fa-solid fa-microchip"></i> Custom FFT Engine</span>
+                    &bull;
+                    <span><i class="fa-solid fa-code"></i> Vanilla JS</span>
+                    &bull;
+                    <span><i class="fa-solid fa-shield-halved"></i> No Server Upload</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-content">
+            <i class="toast-icon fa-solid fa-circle-info" aria-hidden="true"></i>
+            <span class="toast-message"></span>
+        </div>
+        <button class="toast-close" aria-label="Dismiss notification">&times;</button>
+    </div>
+
+    <!-- ═══════════════════════════ RESULT CARD TEMPLATE ═══════════════════════════════ -->
+    <template id="result-card-template">
+        <article class="result-card entering" role="listitem" tabindex="0">
+
+            <!-- Card header -->
+            <div class="card-header">
+                <div class="file-icon-wrapper" aria-hidden="true">
+                    <i class="fa-solid fa-music"></i>
+                </div>
+                <div class="file-info-head">
+                    <h3 class="filename" title="">filename.mp3</h3>
+                    <div class="tags-row">
+                        <span class="tag format-tag">MP3</span>
+                        <span class="tag quality-tag">Analyzing…</span>
+                        <span class="tag bitrate-tag">— kbps</span>
+                    </div>
+                </div>
+                <div class="card-controls">
+                    <button class="card-btn compare-btn" title="Add to comparison">
+                        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                        <span class="visually-hidden">Compare</span>
+                    </button>
+                    <button class="card-btn expand-btn" title="Expand details">
+                        <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                        <span class="visually-hidden">Expand</span>
+                    </button>
+                    <button class="card-btn remove-btn" title="Remove" aria-label="Remove file">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live analysis steps (visible during processing, auto-hides when done) -->
+            <div class="analysis-steps" hidden aria-live="polite" aria-label="Analysis progress"></div>
+
+            <!-- Upscaled warning badge (hidden unless detected) -->
+            <div class="upscaled-badge" hidden>
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                Artificial cutoff detected — may be upscaled
+            </div>
+
+            <!-- Visualizer (spectrogram / waveform) -->
+            <div class="visualizer-container">
+                <canvas class="mini-spectrogram" width="300" height="80"
+                        aria-label="Audio frequency spectrum"></canvas>
+                <div class="viz-controls" aria-label="Visualization mode">
+                    <button class="viz-btn active" data-viz="spectrum" title="Spectrum view">
+                        <i class="fa-solid fa-chart-area" aria-hidden="true"></i>
+                    </button>
+                    <button class="viz-btn" data-viz="waveform" title="Waveform view">
+                        <i class="fa-solid fa-water" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mini audio player -->
+            <div class="audio-player" aria-label="Audio player">
+                <button class="player-play-btn" title="Play / Pause" aria-label="Play">
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                </button>
+                <div class="player-track" role="progressbar" aria-label="Playback position" title="Click to seek">
+                    <div class="player-progress"></div>
+                </div>
+                <span class="player-time">—</span>
+            </div>
+
+            <!-- Stats grid -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i> Size</span>
+                    <span class="stat-value size">—</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-clock" aria-hidden="true"></i> Duration</span>
+                    <span class="stat-value duration">—</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-wave-square" aria-hidden="true"></i> Sample Rate</span>
+                    <span class="stat-value sample-rate">—</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Bitrate</span>
+                    <span class="stat-value bitrate">—</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Spectral analysis data -->
+            <div class="spectral-info">
+                <div class="spec-row">
+                    <span class="spec-label"><i class="fa-solid fa-scissors" aria-hidden="true"></i> Cutoff Frequency</span>
+                    <span class="spec-value cutoff-freq">Pending</span>
+                </div>
+                <div class="spec-row">
+                    <span class="spec-label"><i class="fa-solid fa-percent" aria-hidden="true"></i> Spectrum Usage</span>
+                    <span class="spec-value norm-cutoff">—</span>
+                </div>
+                <div class="spec-row">
+                    <span class="spec-label"><i class="fa-solid fa-chart-area" aria-hidden="true"></i> HF Energy Ratio</span>
+                    <span class="spec-value hf-energy">—</span>
+                </div>
+                <div class="spec-row">
+                    <span class="spec-label"><i class="fa-solid fa-wave-square" aria-hidden="true"></i> Dynamic Range</span>
+                    <span class="spec-value dynamic-range">— dB</span>
+                </div>
+            </div>
+
+            <!-- Quality bar -->
+            <div class="quality-visual">
+                <div class="quality-bar-header">
+                    <span class="quality-label-left">Poor</span>
+                    <span class="quality-score-display">
+                        Score: <strong class="quality-score-num">—</strong>
+                    </span>
+                    <span class="quality-label-right">Excellent</span>
+                </div>
+                <div class="progress-bg">
+                    <div class="quality-fill" style="width:0%"></div>
+                    <div class="quality-markers" aria-hidden="true">
+                        <span style="left:30%">Moderate</span>
+                        <span style="left:60%">Good</span>
+                        <span style="left:85%">Great</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card footer -->
+            <div class="card-footer">
+                <div class="confidence-meter" title="Detection confidence">
+                    <span class="conf-label">Confidence:</span>
+                    <div class="confidence-bars" aria-hidden="true">
+                        <div class="confidence-bar"></div>
+                        <div class="confidence-bar"></div>
+                        <div class="confidence-bar"></div>
+                    </div>
+                    <span class="conf-value">—</span>
+                </div>
+                <span class="analysis-time">
+                    <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+                    <span class="time-value">—</span>s
+                </span>
+            </div>
+
+            <!-- Expanded full view (hidden by default) -->
+            <div class="card-expanded" hidden>
+                <div class="expanded-header">
+                    <h4><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i> Full Spectrum</h4>
+                    <button class="close-expanded btn-text" aria-label="Collapse">
+                        <i class="fa-solid fa-compress" aria-hidden="true"></i> Collapse
+                    </button>
+                </div>
+                <div class="expanded-content">
+                    <canvas class="full-spectrogram-canvas" height="180"
+                            aria-label="Full frequency spectrum"></canvas>
+                    <div class="detailed-stats"></div>
+                </div>
+            </div>
+
+        </article>
+    </template>
+
+    <!-- ═══════════════════════════════════════════════════════
+         PWA BOOTSTRAP — Service Worker + Install Prompt
+    ════════════════════════════════════════════════════════ -->
+    <script>
+    (() => {
+        'use strict';
+
+        /* ── Service Worker registration ─────────────────────── */
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => {
+                        console.log('[PWA] SW registered. Scope:', reg.scope);
+
+                        /* Detect available update */
+                        reg.addEventListener('updatefound', () => {
+                            const worker = reg.installing;
+                            if (!worker) return;
+                            worker.addEventListener('statechange', () => {
+                                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdateBanner(reg);
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.warn('[PWA] SW registration failed:', err));
+
+                /* Reload when new SW takes over */
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) { refreshing = true; location.reload(); }
+                });
+            });
+        }
+
+        /* ── beforeinstallprompt — capture the browser prompt ─── */
+        let deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            const btn = document.getElementById('install-btn');
+            if (btn) {
+                btn.hidden = false;
+                btn.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log('[PWA] Install prompt outcome:', outcome);
+                    deferredPrompt = null;
+                    btn.hidden = true;
+
+                    if (outcome === 'accepted') {
+                        showToast('Soundnalyze installed successfully!', 'success');
+                    }
+                }, { once: true });
+            }
+        });
+
+        /* Hide install button after successful install */
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            const btn = document.getElementById('install-btn');
+            if (btn) btn.hidden = true;
+            console.log('[PWA] App installed');
+        });
+
+        /* ── Update banner ────────────────────────────────────── */
+        function showUpdateBanner(reg) {
+            const banner = document.createElement('div');
+            banner.id = 'update-banner';
+            banner.innerHTML = `
+                <span><i class="fa-solid fa-rotate"></i> New version available</span>
+                <button onclick="applyUpdate('${Math.random()}')">Update Now</button>
+                <button onclick="this.parentElement.remove()">✕</button>
+            `;
+            document.body.appendChild(banner);
+
+            window.applyUpdate = () => {
+                if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                banner.remove();
+            };
+        }
+
+        /* ── Quick toast for install feedback ────────────────── */
+        function showToast(msg, type) {
+            /* Delegate to the main app once loaded */
+            if (window.App?.showToast) { window.App.showToast(msg, type); return; }
+            setTimeout(() => window.App?.showToast(msg, type), 2000);
+        }
+
+        /* ── Online / Offline banner ──────────────────────────── */
+        function setOnlineStatus(online) {
+            let bar = document.getElementById('offline-bar');
+            if (online) {
+                if (bar) { bar.classList.add('going'); setTimeout(() => bar?.remove(), 600); }
+                return;
+            }
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'offline-bar';
+                bar.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> You\'re offline — analysis still works on local files';
+                document.body.prepend(bar);
+            }
+        }
+
+        window.addEventListener('online',  () => setOnlineStatus(true));
+        window.addEventListener('offline', () => setOnlineStatus(false));
+        setOnlineStatus(navigator.onLine);
+
+    })();
+    </script>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
